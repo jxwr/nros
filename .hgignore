@@ -1,0 +1,11 @@
+syntax:glob
+# backup files left by Emacs
+*~
+*.o
+*.img
+*.bin
+*.d
+*.elf
+tools/*/*
+os/*
+

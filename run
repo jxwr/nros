@@ -1,0 +1,24 @@
+#! /bin/bash
+export BOCHS_HOME=/usr/local/share/bochs
+
+emu="qemu"
+
+case "$emu" in
+    "bochs")
+	if [ "$1" == "d" ]; then
+	    bochs -f tools/bochs/bochsrc-gdb.txt -q &
+	    nros-insight --command=tools/gdb.cmd
+	else
+	    bochs -f tools/bochs/bochsrc.txt -q
+	fi;;
+
+    "qemu")
+	if [ "$1" == "d" ]; then
+	    qemu-system-x86_64 -m 32M -boot a -fda nros.img -s &
+	    gdbtui -q --command=tools/gdb.cmd
+	else
+	    qemu-system-x86_64 -m 32M -boot a -fda nros.img
+	fi;;
+esac
+
+
