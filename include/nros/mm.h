@@ -70,4 +70,12 @@ void kmalloc_test();
 void print_malloc_list();
 
 /* mm_vm.c */
+struct proc_s;
+
 void* alloc_page_dir();
+
+void* do_vm_alloc(struct proc_s* proc, void* start, size_t size);
+
+void do_vm_free(struct proc_s* proc);
+
+void vm_free_area(struct proc_s* proc, void* p);

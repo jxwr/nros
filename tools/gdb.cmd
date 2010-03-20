@@ -14,6 +14,8 @@ target remote localhost:1234
  continue
  stepi
 
+b save_hw_ctx
+c
 
 define mem_check
 b map_vm_area

@@ -127,7 +127,6 @@ void* do_vm_alloc(proc_t* proc, void* start, size_t size)
   return (void*)vma->start;
 }
 
-/* return page dir virtual address */
 void* alloc_page_dir()
 {
   page_t* dir = alloc_page_zero();

@@ -24,7 +24,10 @@ mm_alloc.o: mm_alloc.c 	../include/nros/mm.h
 
 mm_vm.o: mm_vm.c ../include/nros/mm.h
 
-proc.o: proc.c
+proc.o: proc.S
+	gcc $(CFLAGS) -c proc.S
+proc.S: proc.c
+	gcc $(CFLAGS) -o proc.S -S proc.c
 
 proc_asm.o: proc_asm.S
 

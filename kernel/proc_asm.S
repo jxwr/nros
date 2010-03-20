@@ -2,7 +2,8 @@
 
 	.global switch_proc
 switch_proc:
-	movl $0x112003, %eax
+	popl %eax
+	popl %eax
 	movl %eax, %cr3
 	
 	movl $UDATA_SEL, %eax
@@ -15,6 +16,6 @@ switch_proc:
 	pushl %ebx
 	movl $UCODE_SEL, %eax
 	pushl %eax
-	movl $0x10, %eax
+	movl $0x2000, %eax
 	pushl %eax
 	iret

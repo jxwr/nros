@@ -75,17 +75,44 @@ void* memmove(void* to, const void* from, size_t count)
   return to;
 }
 
-size_t strlen(const char* str) 
+/* Magic numbers for the algorithm */
+static const unsigned long mask01 = 0x01010101;
+static const unsigned long mask80 = 0x80808080;
+
+#define	LONGPTR_MASK (sizeof(long) - 1)
+
+/*
+ * Helper macro to return string length if we caught the zero
+ * byte.
+ */
+#define testbyte(x)				\
+	do {					\
+		if (p[x] == '\0')		\
+		    return (p - str + x);	\
+	} while (0)
+
+size_t strlen(const char* str)
 {
-  register size_t i;
-  register const char* s = str;
+  const char* p;
+  const unsigned long* lp;
 
-  if (unlikely(!s)) 
-    return 0;
-  for (i=0; likely(*s); ++s) 
-    ++i;
+  /* Skip the first few bytes until we have an aligned p */
+  for (p = str; (unsigned long)p & LONGPTR_MASK; p++)
+    if (*p == '\0')
+      return (p - str);
 
-  return i;
+  /* Scan the rest of the string using word sized operation */
+  for (lp = (const unsigned long *)p; ; lp++)
+    if ((*lp - mask01) & mask80) {
+      p = (const char *)(lp);
+      testbyte(0);
+      testbyte(1);
+      testbyte(2);
+      testbyte(3);
+    }
+
+  /* NOTREACHED */
+  return 0;
 }
 
 char* strcpy(char* to, const char* from)

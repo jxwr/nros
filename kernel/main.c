@@ -25,8 +25,10 @@ int main()
   intr_init();
   except_init();
   sti();
+
   disk_buffer_init();
+  proc_init();
  
-  test_vm();
+  create_proc();
   for(;;);
 }

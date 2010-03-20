@@ -1,9 +1,10 @@
 #include <nros/proc.h>
 #include <nros/mm.h>
 #include <stdio.h>
+#include <list.h>
 #include <string.h>
 
-proc_t* proc_list;
+link_t proc_list;
 proc_t* current_proc;
 
 unsigned long kpagedir;
@@ -28,40 +29,24 @@ static void copy_kernel_vm(unsigned long* page_dir)
 
   for(i = 0x300; i < 1024; i++) {
     page_dir[i] = (&kpagedir)[i];
-    if(page_dir[i] != 0)
-      printf("%x ", page_dir[i]);
   }
 }
-
-void set_ptable_entry(unsigned long* ptable, int idx, unsigned long entry)
-{
-  ptable[idx] = entry;
-}
-
-void switch_proc();
 
 pid_t create_proc()
 {
   proc_t* proc = kmalloc(sizeof(proc_t));
   proc->name = "first proc";
   proc->page_dir = alloc_page_dir();
-  proc->stack = proc->page_dir;
-
-  page_t* page_table = alloc_pages(0);
-  void* table_addr = page_to_vir(page_table);
-  page_t* page = alloc_pages(0);
-  void* page_addr = page_to_vir(page);
-  set_ptable_entry(proc->page_dir, 0, pa(table_addr) | 0x03);
-  set_ptable_entry(table_addr, 0, pa(page_addr) | 0x03);
   copy_kernel_vm(proc->page_dir);
-  memcpy(page_addr, app, sizeof(app));
+  do_vm_alloc(proc, (void*)0x1000, 0x2000);
 
   link_init(&proc->list);
-  proc_list = proc;
-
-  switch_proc();
+  list_insert_after(&proc->list, &proc_list);
 
   return 0;
 }
 
-
+void proc_init()
+{
+  link_init(&proc_list);
+}
