@@ -5,7 +5,8 @@
 #include <string.h>
 
 link_t proc_list;
-proc_t* current_proc;
+proc_t* cur_proc;
+pid_t pid_idx;
 
 unsigned long kpagedir;
 
@@ -32,21 +33,51 @@ static void copy_kernel_vm(unsigned long* page_dir)
   }
 }
 
-pid_t create_proc()
+/* used for test */
+void __attribute__((regparm(3))) proc_app()
+{
+  asm volatile("movl $0x12345678, %eax\n");
+  asm volatile("movl $0x12345678, %ebx\n");
+  asm volatile("1: jmp 1b\n");
+}
+
+/* copy app to proc space */
+void copy_app(proc_t* proc)
+{
+  unsigned long cr3 = pa(proc->page_dir)|0x03;
+  asm volatile("movl %0, %%ebx\n" 
+	       "movl %%ebx, %%cr3":: "m"(cr3));
+  memcpy((void*)0x110000, &proc_app, 0x200);
+}
+
+pid_t create_proc(char* name)
 {
   proc_t* proc = kmalloc(sizeof(proc_t));
-  proc->name = "first proc";
+  proc->name = name;
+  proc->pid = pid_idx++;
   proc->page_dir = alloc_page_dir();
   copy_kernel_vm(proc->page_dir);
-  do_vm_alloc(proc, (void*)0x1000, 0x2000);
+  do_vm_alloc(proc, (void*)0x110000, 0x2000);
+  proc->user_stack = (void*)(0x110000-1);
+  proc->kernel_stack = page_to_vir(alloc_pages(1));
 
+  copy_app(proc);
   link_init(&proc->list);
   list_insert_after(&proc->list, &proc_list);
+  if(cur_proc == NULL)
+    cur_proc = proc;
 
   return 0;
 }
 
+extern void switch_proc();
+
 void proc_init()
 {
+  pid_idx = 0;
+  cur_proc = NULL;
   link_init(&proc_list);
+  create_proc("first proc");
+  
+  asm volatile("jmp switch_proc\n");
 }
