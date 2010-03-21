@@ -6,7 +6,7 @@
 
 proc_t* fastcall __switch_to(proc_t* prev, proc_t* next)
 {
-  tss.esp0 = next->hw_ctx.esp + 0xd8;
+  tss.esp0 = next->hw_ctx.esp0;
   return prev;
 }
 

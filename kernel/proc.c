@@ -63,6 +63,7 @@ pid_t create_proc(char* name)
   do_vm_alloc(proc, (void*)0x110000, 0x2000);
   proc->user_stack = (void*)(0x110000-1);
   proc->hw_ctx.esp = (unsigned long)page_to_vir(alloc_pages(1)) + 0x2000-4;
+  proc->hw_ctx.esp0 = proc->hw_ctx.esp;
   proc->hw_ctx.eip = (unsigned long)start_proc;
   printf("esp0:%x\n", proc->hw_ctx.esp);
   copy_app(proc);
