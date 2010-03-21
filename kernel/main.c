@@ -27,7 +27,7 @@ int main()
   disk_buffer_init();
   proc_init();
  
-  // sti();
+  sti();
 
   for(;;);
 }

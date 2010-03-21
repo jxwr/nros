@@ -1,8 +1,7 @@
 #include <nros/macro.h>
 
-	.global switch_proc
-switch_proc:
-	movl %cr3, %eax
+	.global start_proc
+start_proc:
 	movl $UDATA_SEL, %eax 	
 	pushl %eax 		# ss
 	movw %ax, %ds
@@ -13,10 +12,12 @@ switch_proc:
 	pushl %eax		# esp
 	pushfl
 	popl %ebx
-#	orl $0x200,%ebx
+	orl $0x200,%ebx
 	pushl %ebx		# eflags
 	movl $UCODE_SEL, %eax
 	pushl %eax		# cs
 	movl $0x110000, %eax
 	pushl %eax		# eip
+	movb $END_OF_INTERR,%al
+	outb %al,$MASTER_PIC	
 	iret
