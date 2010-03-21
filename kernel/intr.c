@@ -51,7 +51,9 @@ void set_idt_entry(int num, gate_desc_t* gdesc)
 
 void do_timer()
 {
+  printf("TIMER START[\n");
   schedule();
+  printf("]TIMER END\n");
 }
 
 extern unsigned long fd_irq_done;
@@ -71,9 +73,9 @@ void intr_init()
 {
   gate_desc_t idesc;
 
-  //  mask_irq(IRQ_ENABLE_TIMER | IRQ_ENABLE_FLOPPY | IRQ_ENABLE_KEYBOARD);
+   mask_irq(IRQ_ENABLE_TIMER | IRQ_ENABLE_FLOPPY | IRQ_ENABLE_KEYBOARD);
   idesc.flags = ACC_INTGATE;
-  /*  
+  
   idesc.handler = &timer;
   set_idt_entry(0x20, &idesc);
 
@@ -82,5 +84,5 @@ void intr_init()
 
   idesc.handler = keyboard_interrupt;
   set_idt_entry(0x21, &idesc);
-  */
+
 }

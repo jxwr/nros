@@ -50,17 +50,21 @@ void copy_app(proc_t* proc)
   memcpy((void*)0x110000, &proc_app, 0x200);
 }
 
+extern void start_proc();
+
 pid_t create_proc(char* name)
 {
   proc_t* proc = kmalloc(sizeof(proc_t));
   proc->name = name;
   proc->pid = pid_idx++;
   proc->page_dir = alloc_page_dir();
+  printf("dir:%x\n",proc->page_dir);
   copy_kernel_vm(proc->page_dir);
   do_vm_alloc(proc, (void*)0x110000, 0x2000);
   proc->user_stack = (void*)(0x110000-1);
-  proc->kernel_stack = page_to_vir(alloc_pages(1));
-
+  proc->hw_ctx.esp = (unsigned long)page_to_vir(alloc_pages(1)) + 0x2000-4;
+  proc->hw_ctx.eip = (unsigned long)start_proc;
+  printf("esp0:%x\n", proc->hw_ctx.esp);
   copy_app(proc);
   link_init(&proc->list);
   list_insert_after(&proc->list, &proc_list);
@@ -70,14 +74,16 @@ pid_t create_proc(char* name)
   return 0;
 }
 
-extern void switch_proc();
-
 void proc_init()
 {
   pid_idx = 0;
   cur_proc = NULL;
   link_init(&proc_list);
   create_proc("first proc");
-  
-  asm volatile("jmp switch_proc\n");
+  tss.esp0 = cur_proc->hw_ctx.esp;
+  tss.ss0 = KDATA_SEL;
+  create_proc("second proc");
+  asm volatile("movl %0, %%esp\n\t"
+	       "jmp start_proc\n\t"
+	       ::"m"(cur_proc->hw_ctx.esp));
 }
