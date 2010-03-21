@@ -31,6 +31,7 @@ typedef struct tss_s {
 extern tss_t tss;
 /* hardware context */
 typedef struct hw_ctx_s {
+  unsigned long esp0;
   unsigned long esp;
   unsigned long eip;
 } hw_ctx_t;
