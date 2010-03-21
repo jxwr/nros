@@ -6,7 +6,8 @@ OBJS = head.o main.o mm.o mm_alloc.o \
 	intr.o intr_asm.o except.o except_asm.o \
 	floppy.o disk_buffer.o fat12.o \
 	keyboard.o keyboard_asm.o \
-	mm_vm.o proc.o proc_asm.o
+	mm_vm.o proc.o proc_asm.o \
+	schedule.o
 
 ../kernel.bin: kernel.elf
 	$(OBJCOPY) $(OBJCOPY_FLAGS) $< $@
@@ -30,6 +31,8 @@ proc.S: proc.c
 	gcc $(CFLAGS) -o proc.S -S proc.c
 
 proc_asm.o: proc_asm.S
+
+schedule.o: schedule.c
 
 intr.o: intr.c
 

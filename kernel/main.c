@@ -24,11 +24,10 @@ int main()
 
   intr_init();
   except_init();
-  sti();
-
   disk_buffer_init();
   proc_init();
  
-  create_proc();
+  // sti();
+
   for(;;);
 }

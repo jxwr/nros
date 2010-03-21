@@ -30,7 +30,7 @@ static void map_vm_area(proc_t* proc, vm_area_t* vma)
     if(!PAGE_PRESENT(pagedir_base[pd_idx])) {
       void* p = page_to_vir(alloc_page_zero());
       /* printf("ALLOC: pagetable:%x\n", p); */
-      pagedir_base[pd_idx] = pa(p) | 0x03;
+      pagedir_base[pd_idx] = pa(p) | 0x07;
     }
 
     pagedir_entry = pagedir_base[pd_idx];
@@ -40,7 +40,7 @@ static void map_vm_area(proc_t* proc, vm_area_t* vma)
     do{
       if(!PAGE_PRESENT(pagetable_base[pt_idx])) {
 	void* p = page_to_vir(alloc_page_zero());
-	pagetable_base[pt_idx % PAGE_TABLE_ENTRY_CNT] = pa(p) | 0x03;
+	pagetable_base[pt_idx % PAGE_TABLE_ENTRY_CNT] = pa(p) | 0x07;
       }
       pt_idx++;
     }while(pt_idx % PAGE_TABLE_ENTRY_CNT != 0 && pt_idx <= pt_idx_end);

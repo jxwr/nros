@@ -1,5 +1,6 @@
 #include <nros/common.h>
 #include <nros/intr.h>
+#include <nros/proc.h>
 #include <nros/port.h>
 #include <stdio.h>
 #include <string.h>
@@ -50,7 +51,7 @@ void set_idt_entry(int num, gate_desc_t* gdesc)
 
 void do_timer()
 {
-  //  printf("timer ");
+  schedule();
 }
 
 extern unsigned long fd_irq_done;
@@ -70,9 +71,9 @@ void intr_init()
 {
   gate_desc_t idesc;
 
-  /*  mask_irq(IRQ_ENABLE_TIMER | IRQ_ENABLE_FLOPPY | IRQ_ENABLE_KEYBOARD);
+  //  mask_irq(IRQ_ENABLE_TIMER | IRQ_ENABLE_FLOPPY | IRQ_ENABLE_KEYBOARD);
   idesc.flags = ACC_INTGATE;
-  
+  /*  
   idesc.handler = &timer;
   set_idt_entry(0x20, &idesc);
 
