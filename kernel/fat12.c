@@ -293,8 +293,8 @@ static void fat12_rw_aux(int cmd, char* dir_buf, char* filename, int offset, voi
 	next_cluster &= 0x0fff;
 
 	if(curr_sect >= start_sect && curr_sect <= end_sect) {
-	  unsigned long* block_num = NULL;
-	  sect_buf = read_sector(sect_num, block_num);
+	  unsigned long block_num = 0;;
+	  sect_buf = read_sector(sect_num, &block_num);
 
 	  if(curr_sect == start_sect) {
 	    int cpysize =  (len + start_byte) > SECTOR_SIZE ? (SECTOR_SIZE - start_byte) : len;
@@ -323,7 +323,7 @@ static void fat12_rw_aux(int cmd, char* dir_buf, char* filename, int offset, voi
 	    else
 	      BUG_MSG("FAT12 cmd error.\n");
 	  }
-	  disk_buffer_put(*block_num);
+	  disk_buffer_put(block_num);
 	}
 
 	if(next_cluster >= 0xff8)
@@ -410,10 +410,5 @@ void fat12_remove(char* filename)
 void fat12_init()
 {
   fat12_set_info(FAT12_INFO_READ);
-  
-  char* str = "mlegebazi";
-  
-  fat12_create("soga");
-  fat12_write("soga", 0, str, strlen(str));
   print_dir();
 }

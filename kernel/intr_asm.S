@@ -10,12 +10,11 @@ timer:
 	movb $END_OF_INTERR,%al
 	outb %al,$MASTER_PIC
 	popa
-	
-	sti
 	iret
 
 floppy:
 	pusha
+	cli
 	call do_floppy
 	movb $END_OF_INTERR,%al
 	outb %al,$MASTER_PIC

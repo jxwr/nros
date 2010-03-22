@@ -87,8 +87,7 @@ static void dma_write_mode()
 */
 static void wait_for_irq_done()
 {
-  while(fd_irq_done == 0)
-    printf("waiting ");
+  while(fd_irq_done == 0);
   fd_irq_done = 0;
 }
 
@@ -134,7 +133,7 @@ void fd_rw(int cmd, unsigned long sector_linear)
   outb(0x1b, FDC_FIFO);
   /* data size */
   outb(0xff, FDC_FIFO);
-  wait_for_irq_done();
+  //  wait_for_irq_done();
 
   for(i = 0; i < 7; i++) {
     inb(FDC_FIFO);

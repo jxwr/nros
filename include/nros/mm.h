@@ -79,3 +79,5 @@ void* do_vm_alloc(struct proc_s* proc, void* start, size_t size);
 void do_vm_free(struct proc_s* proc);
 
 void vm_free_area(struct proc_s* proc, void* p);
+
+void print_vma_list(struct proc_s* proc);

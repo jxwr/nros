@@ -1,4 +1,5 @@
 #include <nros/macro.h>
+#include <nros/executable.h>
 
 	.global start_proc
 start_proc:
@@ -8,7 +9,7 @@ start_proc:
 	movw %ax, %es
 	movw %ax, %fs
 	movw %ax, %gs
-	movl $0x111000, %eax
+	movl $EXEC_STACK_BASE, %eax
 	pushl %eax		# esp
 	pushfl
 	popl %ebx
@@ -16,8 +17,15 @@ start_proc:
 	pushl %ebx		# eflags
 	movl $UCODE_SEL, %eax
 	pushl %eax		# cs
-	movl $0x110000, %eax
+	movl $EXEC_TEXT_BASE, %eax
 	pushl %eax		# eip
+
+	/*
+	 * a new created process starts when scheduled, and schedule
+	 * happens in interrupts or syscalls, when interrupts happen,
+	 * we should send END_OF_INTERR to PIC after handling the
+	 * interrupt, now we just send it in both situations
+	 */
 	movb $END_OF_INTERR,%al
 	outb %al,$MASTER_PIC	
 	iret

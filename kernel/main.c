@@ -25,8 +25,8 @@ int main()
   intr_init();
   except_init();
   disk_buffer_init();
+  fat12_init();
   proc_init();
- 
   sti();
 
   for(;;);
