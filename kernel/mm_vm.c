@@ -226,7 +226,7 @@ void do_vm_free(proc_t* proc)
   }
 }
 
-static void print_vma_list(proc_t* proc)
+void print_vma_list(proc_t* proc)
 {
   vm_area_t* vma = proc->vm_info.vm_area_list;
   

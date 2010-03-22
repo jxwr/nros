@@ -42,7 +42,8 @@ typedef unsigned int pid_t;
 typedef struct proc_s {
   pid_t pid;
   vm_info_t vm_info;
-  void* user_stack;
+  void* text_base;
+  void* stack_base;
   void* page_dir; /* x86, page directory virtual address */
   link_t list;
   char* name;
@@ -58,3 +59,4 @@ void proc_init();
 pid_t create_proc();
 
 void schedule();
+

@@ -1,0 +1,6 @@
+#pragma once
+
+#define EXEC_TEXT_BASE   0x08048000
+#define EXEC_DATA_BASE   
+#define EXEC_STACK_BASE  0xc0000000
+#define EXEC_INIT_STACK_SIZE 0x1000

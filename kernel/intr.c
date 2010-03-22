@@ -60,7 +60,7 @@ extern unsigned long fd_irq_done;
 
 void do_floppy()
 {
-  //  printf("floppy interrupt\n");
+  printf("floppy interrupt\n");
   fd_irq_done = 1;
 }
 
@@ -73,7 +73,7 @@ void intr_init()
 {
   gate_desc_t idesc;
 
-   mask_irq(IRQ_ENABLE_TIMER | IRQ_ENABLE_FLOPPY | IRQ_ENABLE_KEYBOARD);
+  mask_irq(IRQ_ENABLE_TIMER | IRQ_ENABLE_FLOPPY | IRQ_ENABLE_KEYBOARD);
   idesc.flags = ACC_INTGATE;
   
   idesc.handler = &timer;
