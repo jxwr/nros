@@ -34,25 +34,7 @@ void context_switch(proc_t* prev, proc_t* next)
   asm volatile("movl %0, %%ebx\n" 
 	       "movl %%ebx, %%cr3":: "m"(cr3));
   printf("prev:%s\tnext:%s\n", prev->name, next->name);
-  //  switch_to(prev, next);
-
-do { \
-  unsigned long esi, edi;	   \
-  asm volatile("pushfl\n\t"	   \
-	       "pushl %%ebp\n\t"   \
-	       "movl %%esp,%0\n\t" \
-	       "movl %4,%%esp\n\t" \
-  	       "movl $1f,%1\n\t"   \
-               "pushl %5\n\t"	   \
-               "jmp __switch_to\n" \
-               "1:\t"		   \
-               "popl %%ebp\n\t"	   \
-	       "popfl"		   \
-  :"=m"(prev->hw_ctx.esp),"=m"(prev->hw_ctx.eip), \
-   "=S"(esi),"=D"(edi)				  \
-  :"m"(next->hw_ctx.esp),"m"(next->hw_ctx.eip),	\
-	       "a"(prev),"d"(next));		  \
- } while(0);
+  switch_to(prev, next);
 }
 
 void schedule()
