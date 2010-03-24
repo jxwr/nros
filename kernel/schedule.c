@@ -10,29 +10,10 @@ proc_t* fastcall __switch_to(proc_t* prev, proc_t* next)
   return prev;
 }
 
-#define switch_to(prev, next) do { \
-  unsigned long esi, edi;	   \
-  asm volatile("pushfl\n\t"	   \
-	       "pushl %%ebp\n\t"   \
-	       "movl %%esp,%0\n\t" \
-	       "movl %4,%%esp\n\t" \
-  	       "movl $1f,%1\n\t"   \
-               "pushl %5\n\t"	   \
-               "jmp __switch_to\n" \
-               "1:\t"		   \
-               "popl %%ebp\n\t"	   \
-	       "popfl"		   \
-  :"=m"(prev->hw_ctx.esp),"=m"(prev->hw_ctx.eip), \
-   "=S"(esi),"=D"(edi)				  \
-  :"m"(next->hw_ctx.esp),"m"(next->hw_ctx.eip),	\
-	       "a"(prev),"d"(next));		  \
-} while(0)
-
 void context_switch(proc_t* prev, proc_t* next)
 {
   unsigned long cr3 = pa(next->page_dir)|0x03;
-  asm volatile("movl %0, %%ebx\n" 
-	       "movl %%ebx, %%cr3":: "m"(cr3));
+  asm volatile("movl %0, %%cr3":: "r"(cr3));
   switch_to(prev, next);
 }
 

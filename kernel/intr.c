@@ -87,8 +87,11 @@ void do_sys_exit()
   cur_proc = link_to_struct(cur_proc->list.next, proc_t, list);
   if(cur_proc == NULL)
     BUG_MSG("cur_proc is NULL");
+
   list_remove(&prev->list);
-  context_switch(prev, cur_proc);
+  /* free proc resource */
+  destroy_proc(prev, cur_proc);
+  switch_to(prev, cur_proc);
 }
 
 void intr_init()
