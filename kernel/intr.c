@@ -14,6 +14,8 @@ extern void timer();
 extern void floppy();
 extern void keyboard_interrupt();
 
+extern void sys_test();
+
 typedef struct idt_entry_s {
   unsigned short handler_low16;
   unsigned short selector;
@@ -49,11 +51,15 @@ void set_idt_entry(int num, gate_desc_t* gdesc)
   memcpy(idt_addr + num * sizeof(idt_entry_t), &ie, sizeof(idt_entry_t));
 }
 
+unsigned long tick = 0;
+
 void do_timer()
 {
-  printf("TIMER START[\n");
-  schedule();
-  printf("]TIMER END\n");
+  tick++;
+  if(tick % 2 == 0) {
+    tick = 0;
+    schedule();
+  }
 }
 
 extern unsigned long fd_irq_done;
@@ -69,12 +75,17 @@ void do_tty_interrupt()
 
 }
 
+void do_sys_test()
+{
+  printf("%s\n", cur_proc->name);
+}
+
 void intr_init()
 {
   gate_desc_t idesc;
 
   mask_irq(IRQ_ENABLE_TIMER | IRQ_ENABLE_FLOPPY | IRQ_ENABLE_KEYBOARD);
-  idesc.flags = ACC_INTGATE;
+  idesc.flags = ACC_INTGATE | ACC_PRESENT;
   
   idesc.handler = &timer;
   set_idt_entry(0x20, &idesc);
@@ -82,7 +93,10 @@ void intr_init()
   idesc.handler = &floppy;
   set_idt_entry(0x26, &idesc);
 
-  idesc.handler = keyboard_interrupt;
+  idesc.handler = &keyboard_interrupt;
   set_idt_entry(0x21, &idesc);
 
+  idesc.flags = ACC_INTGATE | ACC_PRESENT | ACC_DPL_RING3;
+  idesc.handler = &sys_test;
+  set_idt_entry(0x40, &idesc);
 }

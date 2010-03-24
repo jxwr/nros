@@ -3,9 +3,10 @@
 	.extern do_timer
 	.global timer
 	.global floppy
+	.global sys_test
 timer:
-	cli	
 	pusha
+	cli
 	call do_timer
 	movb $END_OF_INTERR,%al
 	outb %al,$MASTER_PIC
@@ -18,5 +19,12 @@ floppy:
 	call do_floppy
 	movb $END_OF_INTERR,%al
 	outb %al,$MASTER_PIC
+	popa
+	iret
+
+sys_test:
+	pusha
+	cli
+	call do_sys_test
 	popa
 	iret
