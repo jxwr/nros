@@ -19,14 +19,14 @@ void context_switch(proc_t* prev, proc_t* next)
 
 void schedule()
 {
-  proc_t* prev = cur_proc;
+  proc_t* prev = current;
   proc_t* next = NULL;
 
-  if(cur_proc->list.next != &proc_list)
-    next = link_to_struct(cur_proc->list.next, proc_t, list);
+  if(current->list.next != &proc_list)
+    next = link_to_struct(current->list.next, proc_t, list);
   else
-    next = link_to_struct(cur_proc->list.next->next, proc_t, list);
-  cur_proc = next;
+    next = link_to_struct(current->list.next->next, proc_t, list);
+  current = next;
   
   context_switch(prev, next);
 }

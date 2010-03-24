@@ -8,7 +8,7 @@
 #include <string.h>
 
 link_t proc_list;
-proc_t* cur_proc;
+proc_t* current;
 pid_t pid_idx;
 
 extern unsigned long kpagedir;
@@ -92,9 +92,9 @@ pid_t create_proc(char* name, char* filename)
 
   link_init(&proc->list);
   list_insert_after(&proc->list, &proc_list);
-  if(cur_proc == NULL) {
+  if(current == NULL) {
     load_idle(proc);
-    cur_proc = proc;
+    current = proc;
   }
 
   return 0;
@@ -119,21 +119,24 @@ void destroy_proc(proc_t* proc, proc_t* next)
 
 void proc_init()
 {
-  unsigned long cr3;
-
   pid_idx = 0;
-  cur_proc = NULL;
+  current = NULL;
   link_init(&proc_list);
   create_proc("idle", "TEST");
-  tss.esp0 = cur_proc->hw_ctx.esp;
+  tss.esp0 = current->hw_ctx.esp;
   tss.ss0 = KDATA_SEL;
-  cr3 = pa(cur_proc->page_dir)|0x07;
   
   create_proc("proc1", "TEST");
   create_proc("proc2", "TEST");
+}
+
+void switch_to_user()
+{
+  unsigned long cr3;
+  cr3 = pa(current->page_dir)|0x07;
 
   asm volatile("movl %0, %%esp\n\t"
 	       "movl %1, %%cr3\n"
 	       "jmp start_proc\n\t"
-	       ::"m"(cur_proc->hw_ctx.esp),"r"(cr3));
+	       ::"m"(current->hw_ctx.esp),"r"(cr3));
 }

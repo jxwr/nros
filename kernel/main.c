@@ -8,6 +8,7 @@
 #include <nros/floppy.h>
 #include <nros/fat12.h>
 #include <nros/proc.h>
+#include <nros/tty.h>
 
 
 boot_info_t* get_boot_info()
@@ -20,6 +21,7 @@ void test_vm();
 int main()
 {
   boot_info_t* bootinfo = get_boot_info();
+
   mm_init(bootinfo->mem_size);
 
   intr_init();
@@ -27,7 +29,8 @@ int main()
   disk_buffer_init();
   fat12_init();
   proc_init();
-  sti();
+  con_init();
 
+  switch_to_user();
   for(;;);
 }
