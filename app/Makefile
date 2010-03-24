@@ -6,7 +6,7 @@ OBJS = test.o
 ../test.bin: test.elf
 	$(OBJCOPY) $(OBJCOPY_FLAGS) $< $@
 
-test.elf: $(OBJS)
+test.elf: $(OBJS) ../lib/crt.o
 	$(LD) $(LDFLAGS) -T ./test.ld $^ -o $@
 
 test.o: test.c

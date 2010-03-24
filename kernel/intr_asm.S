@@ -1,9 +1,6 @@
 #include <nros/macro.h>
 	
-	.extern do_timer
 	.global timer
-	.global floppy
-	.global sys_test
 timer:
 	pusha
 	cli
@@ -12,7 +9,8 @@ timer:
 	outb %al,$MASTER_PIC
 	popa
 	iret
-
+	
+	.global floppy
 floppy:
 	pusha
 	cli
@@ -22,9 +20,16 @@ floppy:
 	popa
 	iret
 
+	.global sys_test
 sys_test:
 	pusha
-	cli
 	call do_sys_test
+	popa
+	iret
+
+	.global sys_exit
+sys_exit:
+	pusha
+	call do_sys_exit
 	popa
 	iret

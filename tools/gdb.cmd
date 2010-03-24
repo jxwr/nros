@@ -16,7 +16,14 @@ target remote localhost:1234
 
 # b __switch_to if $esp >= 0xc013b000 && $esp <= 0xc013bfff
 
+# disassembly
+define das
+       disass $eip $eip + $arg0
+end
 
+define cur_proc_name
+       p cur_proc->name
+end
 
 define switch_check
 b __switch_to if $esp <= 0xc013e000
