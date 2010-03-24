@@ -60,3 +60,6 @@ pid_t create_proc();
 
 void schedule();
 
+void context_switch(proc_t* prev, proc_t* next);
+
+

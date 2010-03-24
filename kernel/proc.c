@@ -24,11 +24,28 @@ static void copy_kernel_vm(unsigned long* page_dir)
 }
 
 /* used for test */
-void __attribute__((regparm(3))) proc_app()
+void idle()
 {
   asm volatile("1:\t"
-	       "int $0x40\n"
 	       "jmp 1b\n");
+}
+
+static void load_idle(proc_t* proc)
+{
+  unsigned long old_cr3;
+  unsigned long cr3 = pa(proc->page_dir)|0x07;
+
+  /* change address space temporarily */
+  asm volatile("movl %%cr3, %0\n" 
+	       "movl %1, %%ebx\n"
+	       "movl %%ebx, %%cr3"
+	       : "=r"(old_cr3)
+	       : "m"(cr3));
+
+  memcpy((void*)EXEC_TEXT_BASE, &idle, 0x100);
+
+  /* back to the original address space */
+  asm volatile("movl %0, %%cr3\n" :: "r"(old_cr3));
 }
 
 void load_executable(proc_t* proc, char* filename)
@@ -44,7 +61,6 @@ void load_executable(proc_t* proc, char* filename)
 	       : "m"(cr3));
 
   fat12_read(filename, 0, (void*)EXEC_TEXT_BASE, PAGE_SIZE);
-  //  memcpy((void*)EXEC_TEXT_BASE, &proc_app, 0x200);
 
   /* back to the original address space */
   asm volatile("movl %0, %%cr3\n" :: "r"(old_cr3));
@@ -76,8 +92,10 @@ pid_t create_proc(char* name, char* filename)
 
   link_init(&proc->list);
   list_insert_after(&proc->list, &proc_list);
-  if(cur_proc == NULL)
+  if(cur_proc == NULL) {
+    load_idle(proc);
     cur_proc = proc;
+  }
 
   return 0;
 }
@@ -89,7 +107,7 @@ void proc_init()
   pid_idx = 0;
   cur_proc = NULL;
   link_init(&proc_list);
-  create_proc("proc0", "TEST");
+  create_proc("idle", "TEST");
   tss.esp0 = cur_proc->hw_ctx.esp;
   tss.ss0 = KDATA_SEL;
   cr3 = pa(cur_proc->page_dir)|0x07;

@@ -1,10 +1,11 @@
 OUTPUT_FORMAT(elf32-i386)
-ENTRY(main)
+ENTRY(start)
 SECTIONS
 {
 	. = 0x08048000;
 
-	.text : { *(.text) }
+	.text : { ../lib/crt.o(.text);
+	      	  test.o(.text) }
 
 	. = ALIGN(4);
 	.data : { *(.data) }

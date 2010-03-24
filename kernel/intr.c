@@ -15,6 +15,7 @@ extern void floppy();
 extern void keyboard_interrupt();
 
 extern void sys_test();
+extern void sys_exit();
 
 typedef struct idt_entry_s {
   unsigned short handler_low16;
@@ -56,7 +57,7 @@ unsigned long tick = 0;
 void do_timer()
 {
   tick++;
-  if(tick % 2 == 0) {
+  if(tick % 1 == 0) {
     tick = 0;
     schedule();
   }
@@ -77,7 +78,17 @@ void do_tty_interrupt()
 
 void do_sys_test()
 {
-  printf("%s\n", cur_proc->name);
+  printf("%s\t", cur_proc->name);
+}
+
+void do_sys_exit()
+{
+  proc_t* prev = cur_proc;
+  cur_proc = link_to_struct(cur_proc->list.next, proc_t, list);
+  if(cur_proc == NULL)
+    BUG_MSG("cur_proc is NULL");
+  list_remove(&prev->list);
+  context_switch(prev, cur_proc);
 }
 
 void intr_init()
@@ -99,4 +110,7 @@ void intr_init()
   idesc.flags = ACC_INTGATE | ACC_PRESENT | ACC_DPL_RING3;
   idesc.handler = &sys_test;
   set_idt_entry(0x40, &idesc);
+
+  idesc.handler = &sys_exit;
+  set_idt_entry(0x41, &idesc);
 }
