@@ -7,7 +7,9 @@ OBJS = head.o main.o mm.o mm_alloc.o \
 	floppy.o disk_buffer.o fat12.o \
 	keyboard.o keyboard_asm.o \
 	mm_vm.o proc.o proc_asm.o \
-	schedule.o
+	schedule.o console.o
+
+HEADERS = ../include/nros/mm.h ../include/nros/proc.h
 
 ../kernel.bin: kernel.elf
 	$(OBJCOPY) $(OBJCOPY_FLAGS) $< $@
@@ -17,40 +19,39 @@ kernel.elf: $(OBJS) ../lib/libc.a
 
 head.o: head.S
 
-main.o: main.c
+main.o: main.c mm_alloc.c $(HEADERS)
 
-mm.o: mm.c ../include/nros/mm.h
+mm.o: mm.c mm_alloc.c $(HEADERS)
 
-mm_alloc.o: mm_alloc.c 	../include/nros/mm.h
+mm_alloc.o: mm_alloc.c $(HEADERS)
 
-mm_vm.o: mm_vm.c ../include/nros/mm.h
+mm_vm.o: mm_vm.c $(HEADERS)
 
-proc.o: proc.S
-	gcc $(CFLAGS) -c proc.S
-proc.S: proc.c
-	gcc $(CFLAGS) -o proc.S -S proc.c
+proc.o: proc.c $(HEADERS)
 
 proc_asm.o: proc_asm.S
 
-schedule.o: schedule.c
+schedule.o: schedule.c $(HEADERS)
 
-intr.o: intr.c
+intr.o: intr.c $(HEADERS)
 
 intr_asm.o: intr_asm.S
 
-except.o: except.c
+except.o: except.c $(HEADERS)
 
-except_asm.o: except_asm.S
+except_asm.o: except_asm.S $(HEADERS)
 
-floppy.o: floppy.c
+floppy.o: floppy.c $(HEADERS)
 
-disk_buffer.o: disk_buffer.c
+disk_buffer.o: disk_buffer.c $(HEADERS)
 
-fat12.o: fat12.c
+fat12.o: fat12.c $(HEADERS)
 
 keyboard_asm.o: keyboard_asm.S
 
-keyboard.o: keyboard.c
+keyboard.o: keyboard.c $(HEADERS)
+
+console.o: console.c
 
 clean:
 	rm *.o *.elf

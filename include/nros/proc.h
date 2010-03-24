@@ -50,10 +50,12 @@ typedef struct proc_s {
   hw_ctx_t hw_ctx;
 } proc_t;
 
-extern proc_t* cur_proc;
+extern proc_t* current;
 extern link_t proc_list;
 
 void proc_init();
+
+void switch_to_user();
 
 pid_t create_proc();
 

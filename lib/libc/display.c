@@ -2,12 +2,13 @@
 #include <ctype.h>
 #include <stdarg.h>
 
-#define GVM_BASE	(KVM_BASE + 0xA0000) // Graphics Video Memory
-#define MTVM_BASE	(KVM_BASE + 0xB0000) // Momochrome Text Video Memory
-#define CTVM_BASE	(KVM_BASE + 0xB8000) // Color Text Video Memory
 
 #define LINE_WORDS 80
 #define LINE_COUNT 25
+
+#define GVM_BASE	(KVM_BASE + 0xA0000) // Graphics Video Memory
+#define MTVM_BASE	(KVM_BASE + 0xB0000) // Momochrome Text Video Memory
+#define CTVM_BASE	(KVM_BASE + 0xB8000) // Color Text Video Memory
 
 static int cur_pos = 0;
 static u16 text_color = 0x0700;
@@ -61,7 +62,6 @@ void puts(const char* str)
   while(*str)
       put_char(*str++);
 }
-
 
 static void put_hex(int n)
 {

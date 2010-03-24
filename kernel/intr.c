@@ -78,20 +78,20 @@ void do_tty_interrupt()
 
 void do_sys_test()
 {
-  printf("%s\t", cur_proc->name);
+  printf("%s\t", current->name);
 }
 
 void do_sys_exit()
 {
-  proc_t* prev = cur_proc;
-  cur_proc = link_to_struct(cur_proc->list.next, proc_t, list);
-  if(cur_proc == NULL)
-    BUG_MSG("cur_proc is NULL");
+  proc_t* prev = current;
+  current = link_to_struct(current->list.next, proc_t, list);
+  if(current == NULL)
+    BUG_MSG("current process is NULL");
 
   list_remove(&prev->list);
   /* free proc resource */
-  destroy_proc(prev, cur_proc);
-  switch_to(prev, cur_proc);
+  destroy_proc(prev, current);
+  switch_to(prev, current);
 }
 
 void intr_init()
