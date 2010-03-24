@@ -27,13 +27,14 @@ static void copy_kernel_vm(unsigned long* page_dir)
 void __attribute__((regparm(3))) proc_app()
 {
   asm volatile("1:\t"
+	       "int $0x40\n"
 	       "jmp 1b\n");
 }
 
 void load_executable(proc_t* proc, char* filename)
 {
   unsigned long old_cr3;
-  unsigned long cr3 = pa(proc->page_dir)|0x03;
+  unsigned long cr3 = pa(proc->page_dir)|0x07;
 
   /* change address space temporarily */
   asm volatile("movl %%cr3, %0\n" 
@@ -43,8 +44,7 @@ void load_executable(proc_t* proc, char* filename)
 	       : "m"(cr3));
 
   fat12_read(filename, 0, (void*)EXEC_TEXT_BASE, PAGE_SIZE);
-  printf("%s\n", EXEC_TEXT_BASE);
-  memcpy((void*)EXEC_TEXT_BASE, &proc_app, 0x200);
+  //  memcpy((void*)EXEC_TEXT_BASE, &proc_app, 0x200);
 
   /* back to the original address space */
   asm volatile("movl %0, %%cr3\n" :: "r"(old_cr3));
@@ -61,12 +61,12 @@ pid_t create_proc(char* name, char* filename)
   proc->page_dir = alloc_page_dir();
 
   copy_kernel_vm(proc->page_dir);
-  proc->text_base = EXEC_TEXT_BASE;
+  proc->text_base = (void*)EXEC_TEXT_BASE;
   /* alloc one page */
-  do_vm_alloc(proc, EXEC_TEXT_BASE, PAGE_SIZE);
+  do_vm_alloc(proc, proc->text_base, PAGE_SIZE);
 
-  proc->stack_base = EXEC_STACK_BASE;
-  do_vm_alloc(proc, EXEC_STACK_BASE - EXEC_INIT_STACK_SIZE, EXEC_INIT_STACK_SIZE);
+  proc->stack_base = (void*)EXEC_STACK_BASE;
+  do_vm_alloc(proc, proc->stack_base - EXEC_INIT_STACK_SIZE, EXEC_INIT_STACK_SIZE);
 
   proc->hw_ctx.esp = (unsigned long)page_to_vir(alloc_pages(1)) + 0x2000;
   proc->hw_ctx.esp0 = proc->hw_ctx.esp;
@@ -84,13 +84,21 @@ pid_t create_proc(char* name, char* filename)
 
 void proc_init()
 {
+  unsigned long cr3;
+
   pid_idx = 0;
   cur_proc = NULL;
   link_init(&proc_list);
-  create_proc("idle", "ACLD");
+  create_proc("proc0", "TEST");
   tss.esp0 = cur_proc->hw_ctx.esp;
   tss.ss0 = KDATA_SEL;
+  cr3 = pa(cur_proc->page_dir)|0x07;
+  
+  create_proc("--proc1", "TEST");
+  create_proc("----proc2", "TEST");
+
   asm volatile("movl %0, %%esp\n\t"
+	       "movl %1, %%cr3\n"
 	       "jmp start_proc\n\t"
-	       ::"m"(cur_proc->hw_ctx.esp));
+	       ::"m"(cur_proc->hw_ctx.esp),"r"(cr3));
 }

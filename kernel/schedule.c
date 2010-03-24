@@ -33,7 +33,6 @@ void context_switch(proc_t* prev, proc_t* next)
   unsigned long cr3 = pa(next->page_dir)|0x03;
   asm volatile("movl %0, %%ebx\n" 
 	       "movl %%ebx, %%cr3":: "m"(cr3));
-  printf("prev:%s\tnext:%s\n", prev->name, next->name);
   switch_to(prev, next);
 }
 
