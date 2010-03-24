@@ -100,6 +100,23 @@ pid_t create_proc(char* name, char* filename)
   return 0;
 }
 
+/*
+ * destroy proc, and change address space to next;
+ */
+void destroy_proc(proc_t* proc, proc_t* next)
+{
+  unsigned long cr3;
+
+  /* switch to 'next address space*/
+  cr3 = pa(next->page_dir)|0x07;
+  asm volatile("movl %0, %%cr3\n" :: "r"(cr3));
+
+  /* free all proc resource */
+  do_vm_free(proc);
+  free_pages(vir_to_page(proc->page_dir), 0);
+  kfree(proc);
+}
+
 void proc_init()
 {
   unsigned long cr3;
@@ -112,8 +129,8 @@ void proc_init()
   tss.ss0 = KDATA_SEL;
   cr3 = pa(cur_proc->page_dir)|0x07;
   
-  create_proc("--proc1", "TEST");
-  create_proc("----proc2", "TEST");
+  create_proc("proc1", "TEST");
+  create_proc("proc2", "TEST");
 
   asm volatile("movl %0, %%esp\n\t"
 	       "movl %1, %%cr3\n"

@@ -53,13 +53,36 @@ typedef struct proc_s {
 extern proc_t* cur_proc;
 extern link_t proc_list;
 
-
 void proc_init();
 
 pid_t create_proc();
 
+/*
+ * destroy proc, and change address space to next;
+ */
+void destroy_proc(proc_t* proc, proc_t* next);
+
+
+/* schedule.c */
 void schedule();
 
+/* change address space to next, and switch to */
 void context_switch(proc_t* prev, proc_t* next);
 
-
+#define switch_to(prev, next) do { \
+  unsigned long esi, edi;	   \
+  asm volatile("pushfl\n\t"	   \
+	       "pushl %%ebp\n\t"   \
+	       "movl %%esp,%0\n\t" \
+	       "movl %4,%%esp\n\t" \
+  	       "movl $1f,%1\n\t"   \
+               "pushl %5\n\t"	   \
+               "jmp __switch_to\n" \
+               "1:\t"		   \
+               "popl %%ebp\n\t"	   \
+	       "popfl"		   \
+  :"=m"(prev->hw_ctx.esp),"=m"(prev->hw_ctx.eip), \
+   "=S"(esi),"=D"(edi)				  \
+  :"m"(next->hw_ctx.esp),"m"(next->hw_ctx.eip),	\
+	       "a"(prev),"d"(next));		  \
+} while(0)
