@@ -1,5 +1,7 @@
 #include <nros/disk_buffer.h>
 #include <nros/common.h>
+#include <nros/mm.h>
+#include <nros/fs.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -16,6 +18,83 @@
 
 static char fat[8*512];
 static char root[14*512];
+
+link_t inode_list;
+
+typedef struct fat12_data_s {
+  char name[8];
+  char ext[3];
+  unsigned char attr;
+  unsigned short reserved;
+  unsigned short ctime;
+  unsigned short cdate;
+  unsigned short adate;
+  unsigned short ignore;
+  unsigned short mtime;
+  unsigned short mdate;
+  unsigned short cluster;
+  unsigned int size;
+} fat12_data_t;
+
+inode_t* fat12_get_inode(const char* filename)
+{
+  inode_t* inode = NULL;
+  char* dp = root;
+  int i;
+  char fname[9];
+
+  list_foreach_struct(inode, &inode_list, i_list) {
+    char* name = NULL;
+
+    name = ((fat12_data_t*)inode->i_data)->name;
+
+    if(strcmp(name, filename) == 0) {
+      inode->i_count++;
+      return inode;
+    }
+  }
+  
+  memset(fname, ' ', 8);
+  strncpy(fname, filename, 8);
+  fname[8] = 0;
+
+  for(i = 0; i < 224; i++) {
+    if(strncmp(dp, fname, 8) == 0) {
+      inode = kmalloc(sizeof(inode_t));
+      inode->i_count = 1;
+      inode->i_data = dp;
+      list_insert_after(&inode->i_list, &inode_list);
+      return inode;
+    }
+    dp += 32;
+  }
+  return NULL;
+}
+
+int fat12_put_inode(inode_t* inode)
+{
+  inode_t* pinode = NULL;
+
+  list_foreach_struct(pinode, &inode_list, i_list) {
+    if(pinode == inode) {
+      inode->i_count--;
+      if(inode->i_count < 0) {
+	BUG_MSG("inode->i_count < 0");
+	return -1;
+      }
+      else if(inode->i_count == 0) {
+	kfree(inode->i_data);
+	kfree(inode);
+      }
+      return 0;
+    }
+  }
+  
+  BUG_MSG("inode not found");
+  return -1;
+}
+
+
 
 /* return sector from disk buffer cache */
 static void* read_sector(unsigned short sect_num,unsigned long* block_nump)
@@ -250,95 +329,80 @@ void fat12_remove_aux(char* dir_buf, char* filename)
 }
 
 
-static void fat12_rw_aux(int cmd, char* dir_buf, char* filename, int offset, void* buf, size_t len)
+static void fat12_rw_aux(int cmd, char* dir_buf, inode_t* inode, int offset, void* buf, size_t len)
 {
-  char* rp = dir_buf;
-  int i;
-  char fname[9];
+  char* rp = inode->i_data;
   
-  memset(fname, ' ', 8);
-  strncpy(fname, filename, 8);
-  fname[8] = 0;
+  int start_sect = offset / SECTOR_SIZE;
+  int end_sect = (offset + len) / SECTOR_SIZE;
+  /* data head */
+  int start_byte = offset % SECTOR_SIZE;
+  /* data tail */
+  int end_byte = (offset + len) % SECTOR_SIZE;
+  /* counter */
+  int curr_sect = 0;
 
-  for(i = 0; i < 224; i++) {
-    if(strncmp(rp, fname, 8) == 0) {
-      int start_sect = offset / SECTOR_SIZE;
-      int end_sect = (offset + len) / SECTOR_SIZE;
-      /* data head */
-      int start_byte = offset % SECTOR_SIZE;
-      /* data tail */
-      int end_byte = (offset + len) % SECTOR_SIZE;
-      /* counter */
-      int curr_sect = 0;
-
-      unsigned long filesize = *(unsigned long*)(rp+28);
+  unsigned long filesize = *(unsigned long*)(rp+28);
       
-      unsigned short first_cluster = *(unsigned short*)(rp+26);
-      /* printf("first cluster: %d\n", first_cluster); */
-      unsigned short cluster = first_cluster;
-      char* bufp = buf;
+  unsigned short first_cluster = *(unsigned short*)(rp+26);
+  /* printf("first cluster: %d\n", first_cluster); */
+  unsigned short cluster = first_cluster;
+  char* bufp = buf;
 
-      if(offset + len > filesize)
-	resize(rp, offset + len);
+  if(offset + len > filesize)
+    resize(rp, offset + len);
 
-      do{
-	unsigned short sect_num = cluster + 31;
-	unsigned short fat_idx = cluster * 3 / 2;
-	unsigned short next_cluster = *(unsigned short*)(fat + fat_idx);
-	char* sect_buf;
+  do{
+    unsigned short sect_num = cluster + 31;
+    unsigned short fat_idx = cluster * 3 / 2;
+    unsigned short next_cluster = *(unsigned short*)(fat + fat_idx);
+    char* sect_buf;
 	
-	if(cluster & 1) {
-	  next_cluster >>= 4;
-	}
-	next_cluster &= 0x0fff;
-
-	if(curr_sect >= start_sect && curr_sect <= end_sect) {
-	  unsigned long block_num = 0;;
-	  sect_buf = read_sector(sect_num, &block_num);
-
-	  if(curr_sect == start_sect) {
-	    int cpysize =  (len + start_byte) > SECTOR_SIZE ? (SECTOR_SIZE - start_byte) : len;
-	    if(cmd == FAT12_READ)
-	      memcpy(bufp, sect_buf + start_byte, cpysize);
-	    else if(cmd == FAT12_WRITE)
-	      memcpy(sect_buf + start_byte, bufp, cpysize);
-	    else
-	      BUG_MSG("FAT12 cmd error.\n");
-	    bufp += cpysize;
-	  }
-	  else if(curr_sect < end_sect) {
-	    if(cmd == FAT12_READ)
-	      memcpy(bufp, sect_buf, SECTOR_SIZE);
-	    else if(cmd == FAT12_WRITE)
-	      memcpy(sect_buf, bufp, SECTOR_SIZE);
-	    else
-	      BUG_MSG("FAT12 cmd error.\n");
-	    bufp += SECTOR_SIZE;
-	  }
-	  else if(curr_sect == end_sect) {
-	    if(cmd == FAT12_READ)
-	      memcpy(bufp, sect_buf, end_byte);
-	    else if(cmd == FAT12_WRITE)
-	      memcpy(sect_buf, bufp, end_byte);
-	    else
-	      BUG_MSG("FAT12 cmd error.\n");
-	  }
-	  disk_buffer_put(block_num);
-	}
-
-	if(next_cluster >= 0xff8)
-	  break;
-
-	curr_sect++;
-	cluster = next_cluster;
-      } while(1);
+    if(cluster & 1) {
+      next_cluster >>= 4;
     }
-    rp += 32;
-  }
-  /*  
-      if(i == 224)
-      panic("file not found.\n");
-  */
+    next_cluster &= 0x0fff;
+
+    if(curr_sect >= start_sect && curr_sect <= end_sect) {
+      unsigned long block_num = 0;;
+      sect_buf = read_sector(sect_num, &block_num);
+
+      if(curr_sect == start_sect) {
+	int cpysize =  (len + start_byte) > SECTOR_SIZE ? (SECTOR_SIZE - start_byte) : len;
+	if(cmd == FAT12_READ)
+	  memcpy(bufp, sect_buf + start_byte, cpysize);
+	else if(cmd == FAT12_WRITE)
+	  memcpy(sect_buf + start_byte, bufp, cpysize);
+	else
+	  BUG_MSG("FAT12 cmd error.\n");
+	bufp += cpysize;
+      }
+      else if(curr_sect < end_sect) {
+	if(cmd == FAT12_READ)
+	  memcpy(bufp, sect_buf, SECTOR_SIZE);
+	else if(cmd == FAT12_WRITE)
+	  memcpy(sect_buf, bufp, SECTOR_SIZE);
+	else
+	  BUG_MSG("FAT12 cmd error.\n");
+	bufp += SECTOR_SIZE;
+      }
+      else if(curr_sect == end_sect) {
+	if(cmd == FAT12_READ)
+	  memcpy(bufp, sect_buf, end_byte);
+	else if(cmd == FAT12_WRITE)
+	  memcpy(sect_buf, bufp, end_byte);
+	else
+	  BUG_MSG("FAT12 cmd error.\n");
+      }
+      disk_buffer_put(block_num);
+    }
+
+    if(next_cluster >= 0xff8)
+      break;
+
+    curr_sect++;
+    cluster = next_cluster;
+  } while(1);
 }
 
 static void print_dir()
@@ -364,28 +428,36 @@ static void print_dir()
   }
 }
 
-
-/* no implementation */
-void fat12_open(char* path)
+int fat12_open(inode_t* inode, file_t* filp)
 {
-
+  filp->f_inode = inode;
+  return 0;
 }
 
-/* 
- * read 'size bytes of the file in the root directory from 'offset into 'buffer,
- * if filesize is less than 'offset + 'size, filesize will change to that large
- */
-void fat12_read(char* filename, int offset, void* buffer, size_t size)
+int fat12_close(inode_t* inode, file_t* filp)
 {
-  fat12_rw_aux(FAT12_READ, root, filename, offset, buffer, size);
+  filp->f_inode = NULL;
+  return 0;
 }
 
-/* 
- * write 'size bytes of the 'buffer in the file
- */
-void fat12_write(char* filename, int offset, void* buffer, size_t size)
+ssize_t fat12_read(file_t* filp, char* buf, size_t size, unsigned int* offset)
 {
-  fat12_rw_aux(FAT12_WRITE, root, filename, offset, buffer, size);
+  inode_t* inode = filp->f_inode;
+  
+  fat12_rw_aux(FAT12_READ, root, inode, *offset, buf, size);
+  offset += size;
+
+  return size;
+}
+
+ssize_t fat12_write(file_t* filp, char* buf, size_t size, unsigned int* offset)
+{
+  inode_t* inode = filp->f_inode;
+
+  fat12_rw_aux(FAT12_WRITE, root, inode, *offset, buf, size);
+  offset += size;
+
+  return size;
 }
 
 /*
@@ -410,5 +482,23 @@ void fat12_remove(char* filename)
 void fat12_init()
 {
   fat12_set_info(FAT12_INFO_READ);
+  link_init(&inode_list);
   print_dir();
 }
+
+fs_operations_t fat12_fsops = {
+  fat12_get_inode,
+  fat12_put_inode
+};
+
+file_operations_t fat12_fops = {
+  fat12_open,
+  fat12_read,
+  fat12_write,
+  fat12_close
+};
+
+file_system_t file_system = {
+  "fat12",
+  &fat12_fsops
+};
