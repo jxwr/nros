@@ -7,9 +7,9 @@ OBJS = head.o main.o mm.o mm_alloc.o \
 	floppy.o disk_buffer.o fat12.o \
 	keyboard.o keyboard_asm.o \
 	mm_vm.o proc.o proc_asm.o \
-	schedule.o console.o
+	schedule.o console.o fs.o \
 
-HEADERS = ../include/nros/mm.h ../include/nros/proc.h
+HEADERS = ../include/nros/mm.h ../include/nros/proc.h ../include/nros/fs.h
 
 ../kernel.bin: kernel.elf
 	$(OBJCOPY) $(OBJCOPY_FLAGS) $< $@
@@ -52,6 +52,8 @@ keyboard_asm.o: keyboard_asm.S
 keyboard.o: keyboard.c $(HEADERS)
 
 console.o: console.c
+
+fs.o: fs.c
 
 clean:
 	rm *.o *.elf

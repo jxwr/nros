@@ -1,6 +1,7 @@
 #pragma once
 #include <list.h>
 #include <nros/mm.h>
+#include <nros/fs.h>
 
 typedef struct tss_s {
   long	back_link;	/* 16 high bits zero */
@@ -29,6 +30,8 @@ typedef struct tss_s {
 } tss_t;
 
 extern tss_t tss;
+#define FILE_DESC_MAX 64
+
 /* hardware context */
 typedef struct hw_ctx_s {
   unsigned long esp0;
@@ -48,6 +51,7 @@ typedef struct proc_s {
   link_t list;
   char* name;
   hw_ctx_t hw_ctx;
+  file_t* filp[FILE_DESC_MAX];
 } proc_t;
 
 extern proc_t* current;
@@ -70,6 +74,8 @@ void schedule();
 
 /* change address space to next, and switch to */
 void context_switch(proc_t* prev, proc_t* next);
+
+int get_free_fd(proc_t* proc);
 
 #define switch_to(prev, next) do { \
   unsigned long esi, edi;	   \

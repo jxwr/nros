@@ -1,7 +1,7 @@
 #include <nros/proc.h>
 #include <nros/executable.h>
 #include <nros/mm.h>
-#include <nros/fat12.h>
+#include <nros/fs.h>
 #include <nros/asm.h>
 #include <stdio.h>
 #include <list.h>
@@ -52,6 +52,9 @@ void load_executable(proc_t* proc, char* filename)
 {
   unsigned long old_cr3;
   unsigned long cr3 = pa(proc->page_dir)|0x07;
+  int fd;
+  proc_t* old_proc = current;
+  current = proc;
 
   /* change address space temporarily */
   asm volatile("movl %%cr3, %0\n" 
@@ -60,8 +63,10 @@ void load_executable(proc_t* proc, char* filename)
 	       : "=r"(old_cr3)
 	       : "m"(cr3));
 
-  fat12_read(filename, 0, (void*)EXEC_TEXT_BASE, PAGE_SIZE);
+  fd = sys_open(filename);
+  sys_read(fd, (void*)EXEC_TEXT_BASE, PAGE_SIZE);
 
+  current = old_proc;
   /* back to the original address space */
   asm volatile("movl %0, %%cr3\n" :: "r"(old_cr3));
 }
@@ -72,6 +77,8 @@ extern void start_proc();
 pid_t create_proc(char* name, char* filename)
 {
   proc_t* proc = kmalloc(sizeof(proc_t));
+  int i;
+
   proc->name = name;
   proc->pid = pid_idx++;
   proc->page_dir = alloc_page_dir();
@@ -88,14 +95,19 @@ pid_t create_proc(char* name, char* filename)
   proc->hw_ctx.esp0 = proc->hw_ctx.esp;
   proc->hw_ctx.eip = (unsigned long)start_proc;
 
-  load_executable(proc, filename);
+  for(i = 0; i < FILE_DESC_MAX; i++) {
+    proc->filp[i] = NULL;
+  }
 
   link_init(&proc->list);
   list_insert_after(&proc->list, &proc_list);
+
   if(current == NULL) {
     load_idle(proc);
     current = proc;
   }
+  else
+    load_executable(proc, filename);
 
   return 0;
 }
@@ -139,4 +151,16 @@ void switch_to_user()
 	       "movl %1, %%cr3\n"
 	       "jmp start_proc\n\t"
 	       ::"m"(current->hw_ctx.esp),"r"(cr3));
+}
+
+int get_free_fd(proc_t* proc)
+{
+  int i;
+
+  for(i = 0; i < FILE_DESC_MAX; i++) {
+    if(proc->filp[i] == NULL)
+      return i;
+  }
+
+  return -1;
 }
