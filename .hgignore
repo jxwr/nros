@@ -8,5 +8,8 @@ syntax:glob
 *.d
 *.elf
 tools/*/*
+app/*~
+app/*.o
+app/*.elf
 os/*
 
