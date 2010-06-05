@@ -6,5 +6,6 @@ start:
 	jmp main
 
 
-crt_exit:	
-	int $0x41
+crt_exit:
+	movl $0x01, %eax
+	int $0x40

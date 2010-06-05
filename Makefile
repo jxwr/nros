@@ -10,6 +10,7 @@ all:
 #test
 	(cd app; make)
 	tools/mkorzimg a test.bin TEST nros.img
+	tools/mkorzimg a idle.bin IDLE nros.img
 
 	tools/mkorzimg a Makefile MAKE nros.img
 	tools/mkorzimg a acl.d ACLD nros.img

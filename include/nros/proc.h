@@ -31,6 +31,7 @@ typedef struct tss_s {
 
 extern tss_t tss;
 #define FILE_DESC_MAX 64
+#define TICK_QUANTUM  100
 
 /* hardware context */
 typedef struct hw_ctx_s {
@@ -49,24 +50,33 @@ typedef struct proc_s {
   void* stack_base;
   void* page_dir; /* x86, page directory virtual address */
   link_t list;
+  int prio;
   char* name;
+  char* filename;
   hw_ctx_t hw_ctx;
+  int tick_left;
   file_t* filp[FILE_DESC_MAX];
 } proc_t;
 
+
+
+#define PRIO_IDLE   0
+#define PRIO_LOW    5
+#define PRIO_NORMAL 10
+#define PRIO_HIGH   20
+#define MAX_PRIO    31
+
+extern link_t run_queue[MAX_PRIO + 1];
 extern proc_t* current;
-extern link_t proc_list;
+extern proc_t* idle_proc;
 
 void proc_init();
 
 void switch_to_user();
 
-pid_t create_proc();
+pid_t create_proc(char* name, char* filename, int prio);
 
-/*
- * destroy proc, and change address space to next;
- */
-void destroy_proc(proc_t* proc, proc_t* next);
+void destroy_proc(proc_t* proc);
 
 
 /* schedule.c */
