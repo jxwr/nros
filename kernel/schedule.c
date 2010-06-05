@@ -1,8 +1,6 @@
+#include <nros/common.h>
 #include <nros/proc.h>
 #include <stdio.h>
-
-#define FASTCALL(x)     x __attribute__((regparm(3)))
-#define fastcall          __attribute__((regparm(3)))
 
 proc_t* fastcall __switch_to(proc_t* prev, proc_t* next)
 {
@@ -22,11 +20,26 @@ void schedule()
   proc_t* prev = current;
   proc_t* next = NULL;
 
+  /*
   if(current->list.next != &proc_list)
     next = link_to_struct(current->list.next, proc_t, list);
   else
     next = link_to_struct(current->list.next->next, proc_t, list);
   current = next;
-  
-  context_switch(prev, next);
+  */
+
+  int i;
+  for(i = MAX_PRIO; i >= 0; i--) {
+    link_t* p = &run_queue[i];
+
+    if(!list_empty(p)) {
+      proc_t* proc = link_to_struct(p->next, proc_t, list);
+
+      next = proc;
+      current = next;
+
+      context_switch(prev, next);
+      break;
+    }
+  }
 }

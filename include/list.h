@@ -53,8 +53,8 @@ static inline void list_remove(link_t* link)
   prev->next = next;
   next->prev = prev;
   
-  link->next = (link_t* )0;
-  link->prev = (link_t* )0;
+  link->next = (link_t* )link;
+  link->prev = (link_t* )link;
 }
 
 static inline void list_remove_init(link_t* link)

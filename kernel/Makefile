@@ -8,8 +8,10 @@ OBJS = head.o main.o mm.o mm_alloc.o \
 	keyboard.o keyboard_asm.o \
 	mm_vm.o proc.o proc_asm.o \
 	schedule.o console.o fs.o \
+	syscall.o syscall_asm.o
 
-HEADERS = ../include/nros/mm.h ../include/nros/proc.h ../include/nros/fs.h
+HEADERS = ../include/nros/mm.h ../include/nros/proc.h \
+	../include/nros/fs.h ../include/nros/syscall.h
 
 ../kernel.bin: kernel.elf
 	$(OBJCOPY) $(OBJCOPY_FLAGS) $< $@
@@ -36,6 +38,10 @@ schedule.o: schedule.c $(HEADERS)
 intr.o: intr.c $(HEADERS)
 
 intr_asm.o: intr_asm.S
+
+syscall.o: syscall.c
+
+syscall_asm.o: syscall_asm.S
 
 except.o: except.c $(HEADERS)
 

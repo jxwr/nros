@@ -7,9 +7,11 @@
 #include <list.h>
 #include <string.h>
 
-link_t proc_list;
 proc_t* current;
+proc_t* idle_proc;
 pid_t pid_idx;
+
+link_t run_queue[MAX_PRIO + 1];
 
 extern unsigned long kpagedir;
 
@@ -48,40 +50,31 @@ static void load_idle(proc_t* proc)
   asm volatile("movl %0, %%cr3\n" :: "r"(old_cr3));
 }
 
-void load_executable(proc_t* proc, char* filename)
-{
-  unsigned long old_cr3;
-  unsigned long cr3 = pa(proc->page_dir)|0x07;
-  int fd;
-  proc_t* old_proc = current;
-  current = proc;
-
-  /* change address space temporarily */
-  asm volatile("movl %%cr3, %0\n" 
-	       "movl %1, %%ebx\n"
-	       "movl %%ebx, %%cr3"
-	       : "=r"(old_cr3)
-	       : "m"(cr3));
-
-  fd = sys_open(filename);
-  sys_read(fd, (void*)EXEC_TEXT_BASE, PAGE_SIZE);
-
-  current = old_proc;
-  /* back to the original address space */
-  asm volatile("movl %0, %%cr3\n" :: "r"(old_cr3));
-}
 
 extern void start_proc();
 
+void load_executable()
+{
+  int fd;
 
-pid_t create_proc(char* name, char* filename)
+  fd = sys_open(current->filename);
+  sys_read(fd, (void*)EXEC_TEXT_BASE, PAGE_SIZE);
+  
+  start_proc();
+}
+
+pid_t create_proc(char* name, char* filename, int prio)
 {
   proc_t* proc = kmalloc(sizeof(proc_t));
   int i;
 
   proc->name = name;
+  proc->filename = filename;
   proc->pid = pid_idx++;
+  proc->prio = prio;
+  proc->tick_left = TICK_QUANTUM;
   proc->page_dir = alloc_page_dir();
+
 
   copy_kernel_vm(proc->page_dir);
   proc->text_base = (void*)EXEC_TEXT_BASE;
@@ -93,36 +86,28 @@ pid_t create_proc(char* name, char* filename)
 
   proc->hw_ctx.esp = (unsigned long)page_to_vir(alloc_pages(1)) + 0x2000;
   proc->hw_ctx.esp0 = proc->hw_ctx.esp;
-  proc->hw_ctx.eip = (unsigned long)start_proc;
+  proc->hw_ctx.eip = (unsigned long)load_executable;
 
   for(i = 0; i < FILE_DESC_MAX; i++) {
     proc->filp[i] = NULL;
   }
 
   link_init(&proc->list);
-  list_insert_after(&proc->list, &proc_list);
-
-  if(current == NULL) {
-    load_idle(proc);
-    current = proc;
+  if(prio >= 0 && prio <= MAX_PRIO) {
+    list_insert_after(&proc->list, &run_queue[prio]);
   }
-  else
-    load_executable(proc, filename);
-
+  else {
+    BUG_ON("create_proc");
+  }
+  
   return 0;
 }
 
 /*
  * destroy proc, and change address space to next;
  */
-void destroy_proc(proc_t* proc, proc_t* next)
+void destroy_proc(proc_t* proc)
 {
-  unsigned long cr3;
-
-  /* switch to 'next address space*/
-  cr3 = pa(next->page_dir)|0x07;
-  asm volatile("movl %0, %%cr3\n" :: "r"(cr3));
-
   /* free all proc resource */
   do_vm_free(proc);
   free_pages(vir_to_page(proc->page_dir), 0);
@@ -131,15 +116,22 @@ void destroy_proc(proc_t* proc, proc_t* next)
 
 void proc_init()
 {
+  int i;
+
   pid_idx = 0;
   current = NULL;
-  link_init(&proc_list);
-  create_proc("idle", "TEST");
+  
+  for(i = 0; i <= MAX_PRIO; i++) {
+    link_init(&run_queue[i]);
+  }
+
+  create_proc("idle", "IDLE", PRIO_IDLE);
+  idle_proc = current = link_to_struct(run_queue[PRIO_IDLE].next, proc_t, list);
+
   tss.esp0 = current->hw_ctx.esp;
   tss.ss0 = KDATA_SEL;
-  
-  create_proc("proc1", "TEST");
-  create_proc("proc2", "TEST");
+
+  create_proc("proc1", "TEST", PRIO_NORMAL);
 }
 
 void switch_to_user()
@@ -149,7 +141,7 @@ void switch_to_user()
 
   asm volatile("movl %0, %%esp\n\t"
 	       "movl %1, %%cr3\n"
-	       "jmp start_proc\n\t"
+	       "jmp load_executable\n\t"
 	       ::"m"(current->hw_ctx.esp),"r"(cr3));
 }
 

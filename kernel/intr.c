@@ -16,6 +16,11 @@ extern void keyboard_interrupt();
 
 extern void sys_test();
 extern void sys_exit();
+extern void syscall();
+
+extern void do_sys_test();
+extern void do_sys_exit();
+extern void do_syscall();
 
 typedef struct idt_entry_s {
   unsigned short handler_low16;
@@ -54,13 +59,28 @@ void set_idt_entry(int num, gate_desc_t* gdesc)
 
 unsigned long tick = 0;
 
+/* return if need reschedule */
+int tick_advance()
+{
+  int need_resched = 0;
+  
+  current->tick_left--;
+  if(current->tick_left < 0) {
+    int prio = current->prio;
+
+    need_resched = 1;
+    current->tick_left = TICK_QUANTUM;
+    list_remove(&current->list);
+    list_insert_before(&run_queue[prio], current);
+  }
+  
+  return need_resched;
+}
+
 void do_timer()
 {
-  tick++;
-  if(tick % 1 == 0) {
-    tick = 0;
+  if(tick_advance())
     schedule();
-  }
 }
 
 extern unsigned long fd_irq_done;
@@ -76,23 +96,7 @@ void do_tty_interrupt()
 
 }
 
-void do_sys_test()
-{
-  printf("%s\t", current->name);
-}
 
-void do_sys_exit()
-{
-  proc_t* prev = current;
-  current = link_to_struct(current->list.next, proc_t, list);
-  if(current == NULL)
-    BUG_MSG("current process is NULL");
-
-  list_remove(&prev->list);
-  /* free proc resource */
-  destroy_proc(prev, current);
-  switch_to(prev, current);
-}
 
 void intr_init()
 {
@@ -111,9 +115,6 @@ void intr_init()
   set_idt_entry(0x21, &idesc);
 
   idesc.flags = ACC_INTGATE | ACC_PRESENT | ACC_DPL_RING3;
-  idesc.handler = &sys_test;
+  idesc.handler = &syscall;
   set_idt_entry(0x40, &idesc);
-
-  idesc.handler = &sys_exit;
-  set_idt_entry(0x41, &idesc);
 }
